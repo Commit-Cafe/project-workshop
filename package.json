@@ -1,0 +1,24 @@
+{
+  "name": "project-workshop",
+  "version": "0.1.0",
+  "description": "多Agent协作开发系统 - 项目工作仓库",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/orchestrator/server.ts",
+    "build": "tsc",
+    "start": "tsx src/orchestrator/server.ts",
+    "test:api": "tsx src/test-api.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.0",
+    "express": "^4.21.0",
+    "ws": "^8.18.0",
+    "xstate": "^5.19.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/ws": "^8.5.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

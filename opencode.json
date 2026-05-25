@@ -1,0 +1,43 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "glm": {
+      "options": {
+        "apiKey": "{env:GLM_API_KEY}",
+        "baseURL": "{env:GLM_BASE_URL}"
+      }
+    },
+    "deepseek": {
+      "options": {
+        "apiKey": "{env:DEEPSEEK_API_KEY}",
+        "baseURL": "{env:DEEPSEEK_BASE_URL}"
+      }
+    },
+    "minimax": {
+      "options": {
+        "apiKey": "{env:MINIMAX_API_KEY}",
+        "baseURL": "{env:MINIMAX_BASE_URL}"
+      }
+    }
+  },
+  "agent": {
+    "tech-lead": {
+      "description": "技术总监，负责架构设计、技术决策和Code Review",
+      "mode": "primary",
+      "model": "glm/glm-5.1",
+      "prompt": "你是项目的技术总监(G)，模型为 GLM-5.1。职责：架构设计、技术选型、Code Review、质量把控、分歧最终裁定。产出：技术方案文档、架构图、Code Review报告、交付报告。决策权：技术选型、代码合入标准、架构分歧的最终裁定。你不能编写业务代码，不能做需求范围决策。遇到分歧时你有最终裁定权。所有输出必须使用中文。"
+    },
+    "product-manager": {
+      "description": "产品经理，负责需求分析、PRD和任务拆解",
+      "mode": "primary",
+      "model": "deepseek/deepseek-v4-pro",
+      "prompt": "你是项目的产品经理(D)，模型为 DeepSeek-V4-Pro。职责：需求分析、PRD输出、验收标准定义、任务拆解、优先级排序。产出：PRD、验收用例、开发任务清单。决策权：需求范围、功能优先级、用户体验方案的最终裁定。你不能做技术选型决策。所有输出必须使用中文。"
+    },
+    "coder": {
+      "description": "程序员，根据PRD和技术方案编写代码",
+      "mode": "subagent",
+      "model": "minimax/minimax-m2.7-highspeed",
+      "prompt": "你是项目的程序员(M)，模型为 MiniMax-M2.7。职责：根据PRD和技术方案编写代码、编写单元测试、修复Bug。产出：可运行代码、单元测试。约束：严格遵循技术总监的架构约束和代码规范。你不能自行做需求或架构决策。遇到需求或技术不明确时，必须停止编码，向产品经理或技术总监发起澄清请求。所有输出必须使用中文。代码注释使用中文。"
+    }
+  }
+}

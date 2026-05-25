@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>项目工作仓库 - 办公室</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; color: #e0e0e0; font-family: 'Courier New', monospace; display: flex; height: 100vh; }
+#sidebar { width: 320px; padding: 16px; display: flex; flex-direction: column; border-right: 1px solid #333; overflow-y: auto; }
+#canvas-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
+canvas { border: 1px solid #333; background: #16213e; }
+h2 { color: #e94560; margin-bottom: 8px; font-size: 16px; }
+.input-group { margin-bottom: 12px; }
+.input-group label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; }
+textarea { width: 100%; height: 80px; background: #0f3460; border: 1px solid #333; color: #e0e0e0; padding: 8px; font-family: inherit; font-size: 13px; resize: none; }
+button { background: #e94560; color: #fff; border: none; padding: 8px 16px; cursor: pointer; font-family: inherit; font-size: 13px; width: 100%; margin-top: 4px; }
+button:hover { background: #c81e45; }
+button:disabled { background: #555; cursor: not-allowed; }
+#status { font-size: 12px; margin-top: 8px; padding: 8px; background: #0f3460; border-radius: 4px; min-height: 40px; }
+#messages { flex: 1; overflow-y: auto; margin-top: 8px; font-size: 11px; line-height: 1.5; }
+.msg { padding: 4px 0; border-bottom: 1px solid #222; }
+.msg-from { color: #e94560; font-weight: bold; }
+.msg-to { color: #0ea5e9; }
+.agent-card { display: flex; align-items: center; gap: 8px; padding: 6px; margin: 4px 0; background: #0f3460; border-radius: 4px; font-size: 12px; }
+.agent-dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-working { background: #22c55e; animation: pulse 1s infinite; }
+.dot-idle { background: #eab308; }
+.dot-resting { background: #3b82f6; }
+.dot-error { background: #ef4444; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <h2>项目工作仓库</h2>
+  <div class="input-group">
+    <label>输入需求</label>
+    <textarea id="requirement" placeholder="描述你的项目需求..."></textarea>
+    <button id="submitBtn" onclick="submitTask()">启动项目</button>
+  </div>
+  <div id="status">等待需求输入...</div>
+  <h2 style="margin-top:12px">团队状态</h2>
+  <div id="agents"></div>
+  <h2 style="margin-top:12px">消息日志</h2>
+  <div id="messages"></div>
+</div>
+<div id="canvas-wrap">
+  <canvas id="office" width="800" height="600"></canvas>
+</div>
+
+<script>
+const API_PORT = location.port || '3800';
+const WS_URL = `ws://${location.hostname}:${API_PORT}/ws`;
+const API_BASE = `http://${location.hostname}:${API_PORT}`;
+let ws = null;
+let agents = {
+  'tech-lead': { role: 'tech-lead', name: '技术总监 G', status: 'idle', animation: 'standing', position: {x:150,y:120}, targetX: 150, targetY: 120 },
+  'product-manager': { role: 'product-manager', name: '产品经理 D', status: 'idle', animation: 'standing', position: {x:650,y:120}, targetX: 650, targetY: 120 },
+  'coder': { role: 'coder', name: '程序员 M', status: 'idle', animation: 'standing', position: {x:400,y:420}, targetX: 400, targetY: 420 },
+};
+let bubbles = [];
+let projectPhase = 'IDLE';
+
+function connectWS() {
+  ws = new WebSocket(WS_URL);
+  ws.onopen = () => { updateStatus('已连接服务器'); };
+  ws.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    handleWSMessage(data);
+  };
+  ws.onclose = () => { updateStatus('连接断开，3秒后重连...'); setTimeout(connectWS, 3000); };
+}
+
+function handleWSMessage(data) {
+  switch(data.type) {
+    case 'init':
+      if (data.agents) data.agents.forEach(a => { if(agents[a.role]) { agents[a.role].status = a.status; agents[a.role].animation = a.animation; }});
+      break;
+    case 'project_started':
+      updateStatus('项目已启动！');
+      break;
+    case 'phase_change':
+      projectPhase = data.phase;
+      updateStatus(`当前阶段: ${data.phase}`);
+      break;
+    case 'phase_progress':
+      let msg = `阶段: ${data.phase}`;
+      if (data.round) msg += ` 第${data.round}轮`;
+      if (data.task) msg += ` 任务: ${data.task}`;
+      updateStatus(msg);
+      if (data.phase === 'DISCUSSING') {
+        moveAgent('tech-lead', 350, 120);
+        moveAgent('product-manager', 450, 120);
+      } else if (data.phase === 'CODING' && data.task) {
+        moveAgent('coder', 400, 420);
+      } else if (data.phase === 'REVIEWING') {
+        moveAgent('tech-lead', 380, 420);
+      }
+      break;
+    case 'agent_status':
+      if (agents[data.role]) {
+        agents[data.role].status = data.status;
+        agents[data.role].animation = data.animation;
+      }
+      break;
+    case 'agent_message':
+      if (data.message) {
+        addMessage(data.message);
+        const m = data.message;
+        const fromName = agents[m.from]?.name || m.from;
+        const content = m.content ? m.content.slice(0, 60) + '...' : '';
+        addBubble(m.from, `${content}`);
+      }
+      break;
+    case 'phase_done':
+      if (data.phase === 'DISCUSSING') {
+        moveAgent('tech-lead', 150, 120);
+        moveAgent('product-manager', 650, 120);
+      }
+      break;
+    case 'project_done':
+      updateStatus('项目完成！交付报告已生成。');
+      Object.keys(agents).forEach(r => { agents[r].status = 'idle'; agents[r].animation = 'standing'; });
+      break;
+    case 'ping': break;
+    default:
+      if (data.message) updateStatus(data.message);
+  }
+  renderAgents();
+}
+
+function moveAgent(role, x, y) {
+  if (agents[role]) { agents[role].targetX = x; agents[role].targetY = y; agents[role].animation = 'walking'; }
+}
+
+function addMessage(msg) {
+  const el = document.getElementById('messages');
+  const fromName = agents[msg.from]?.name || msg.from;
+  const toName = agents[msg.to]?.name || msg.to;
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = `<span class="msg-from">${fromName}</span> → <span class="msg-to">${toName}</span>: ${msg.type} (Phase ${msg.phase})`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+function addBubble(role, text) {
+  const a = agents[role];
+  if (!a) return;
+  bubbles.push({ x: a.position.x, y: a.position.y - 50, text, alpha: 1, timer: 180 });
+}
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+function renderAgents() {
+  const el = document.getElementById('agents');
+  el.innerHTML = '';
+  for (const [role, a] of Object.entries(agents)) {
+    const statusMap = { working: '工作中', idle: '摸鱼中', resting: '休息中', error: '报错中' };
+    const dotClass = { working: 'dot-working', idle: 'dot-idle', resting: 'dot-resting', error: 'dot-error' };
+    el.innerHTML += `<div class="agent-card"><div class="agent-dot ${dotClass[a.status]||'dot-idle'}"></div>${a.name}: ${statusMap[a.status]||a.status}</div>`;
+  }
+}
+
+async function submitTask() {
+  const req = document.getElementById('requirement').value.trim();
+  if (!req) return;
+  document.getElementById('submitBtn').disabled = true;
+  updateStatus('正在提交需求...');
+  try {
+    const res = await fetch(`${API_BASE}/api/task`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ requirement: req })
+    });
+    const data = await res.json();
+    if (data.error) { updateStatus('错误: ' + data.error); document.getElementById('submitBtn').disabled = false; }
+    else { updateStatus('项目已启动: ' + data.projectId); setTimeout(() => { document.getElementById('submitBtn').disabled = false; }, 5000); }
+  } catch(e) { updateStatus('提交失败: ' + e.message); document.getElementById('submitBtn').disabled = false; }
+}
+
+// ===== Canvas 渲染 =====
+const canvas = document.getElementById('office');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+function drawOffice() {
+  ctx.fillStyle = '#16213e';
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = '#2a3a5c';
+  ctx.lineWidth = 2;
+
+  // G room
+  ctx.strokeRect(40, 30, 220, 160);
+  ctx.fillStyle = '#e94560'; ctx.font = '13px monospace'; ctx.fillText('技术总监 G (GLM-5.1)', 60, 55);
+  drawDesk(100, 100);
+
+  // D room
+  ctx.strokeRect(540, 30, 220, 160);
+  ctx.fillStyle = '#0ea5e9'; ctx.fillText('产品经理 D (DeepSeek)', 560, 55);
+  drawDesk(600, 100);
+
+  // corridor
+  ctx.setLineDash([5, 5]);
+  ctx.strokeStyle = '#333';
+  ctx.beginPath(); ctx.moveTo(40, 210); ctx.lineTo(760, 210); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#444'; ctx.font = '11px monospace'; ctx.fillText('走廊', 380, 230);
+
+  // M desks
+  ctx.strokeStyle = '#2a3a5c';
+  const dx = 250;
+  ctx.strokeRect(dx, 360, 180, 120);
+  ctx.fillStyle = '#888'; ctx.font = '11px monospace';
+  ctx.fillText('程序员 M 工位', dx + 30, 380);
+  drawDesk(dx + 50, 420);
+
+  // M status on screens
+  const statusColors = { working: '#22c55e', idle: '#eab308', resting: '#3b82f6', error: '#ef4444' };
+  const statusText = { working: '工作中', idle: '摸鱼中', resting: '休息中', error: '报错中' };
+  const m = agents['coder'];
+  ctx.fillStyle = statusColors[m.status] || '#555';
+  ctx.font = '10px monospace';
+  ctx.fillText(statusText[m.status] || '', 300, 455);
+}
+
+function drawDesk(x, y) {
+  ctx.fillStyle = '#2a3a5c';
+  ctx.fillRect(x, y, 60, 30);
+  ctx.fillStyle = '#0f3460';
+  ctx.fillRect(x + 5, y + 3, 50, 24);
+}
+
+function drawPixelPerson(x, y, animation, role) {
+  const colors = { 'tech-lead': '#e94560', 'product-manager': '#0ea5e9', 'coder': '#22c55e' };
+  const c = colors[role] || '#fff';
+
+  // body
+  ctx.fillStyle = c;
+  ctx.fillRect(x - 8, y - 8, 16, 16);
+
+  // head
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(x - 4, y - 16, 8, 8);
+
+  // eyes
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 2, y - 14, 2, 2);
+  ctx.fillRect(x + 1, y - 14, 2, 2);
+
+  // legs
+  const legOffset = animation === 'walking' ? Math.sin(Date.now() / 100) * 4 : 0;
+  ctx.fillStyle = c;
+  ctx.fillRect(x - 5, y + 8, 3, 8 + legOffset);
+  ctx.fillRect(x + 2, y + 8, 3, 8 - legOffset);
+
+  // arms
+  const armOffset = animation === 'talking' ? Math.sin(Date.now() / 150) * 6 : 0;
+  ctx.fillRect(x - 12, y - 4 + armOffset, 4, 3);
+  ctx.fillRect(x + 8, y - 4 - armOffset, 4, 3);
+
+  // sitting
+  if (animation === 'sitting') {
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x - 10, y + 6, 20, 4);
+  }
+}
+
+function drawBubbles() {
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    const b = bubbles[i];
+    b.timer--;
+    b.y -= 0.3;
+    if (b.timer < 30) b.alpha -= 0.03;
+    if (b.alpha <= 0) { bubbles.splice(i, 1); continue; }
+    ctx.globalAlpha = b.alpha;
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px monospace';
+    const maxW = 120;
+    const text = b.text.slice(0, 30);
+    const tw = ctx.measureText(text).width;
+    const bx = Math.max(5, Math.min(b.x - tw/2 - 4, W - tw - 14));
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillRect(bx, b.y - 14, tw + 8, 18);
+    ctx.fillStyle = '#000';
+    ctx.fillText(text, bx + 4, b.y);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function lerpAgents() {
+  for (const a of Object.values(agents)) {
+    const dx = a.targetX - a.position.x;
+    const dy = a.targetY - a.position.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist > 2) {
+      a.position.x += dx * 0.05;
+      a.position.y += dy * 0.05;
+      a.animation = 'walking';
+    } else if (a.animation === 'walking') {
+      a.animation = a.status === 'working' ? 'talking' : 'standing';
+    }
+  }
+}
+
+function render() {
+  drawOffice();
+  lerpAgents();
+  for (const [role, a] of Object.entries(agents)) {
+    drawPixelPerson(a.position.x, a.position.y, a.animation, role);
+  }
+  drawBubbles();
+  requestAnimationFrame(render);
+}
+
+connectWS();
+renderAgents();
+render();
+</script>
+</body>
+</html>
