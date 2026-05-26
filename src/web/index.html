@@ -3,50 +3,108 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>项目工作仓库 - 办公室</title>
+<title>Project Workshop — 多Agent协作开发</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #1a1a2e; color: #e0e0e0; font-family: 'Courier New', monospace; display: flex; height: 100vh; }
-#sidebar { width: 320px; padding: 16px; display: flex; flex-direction: column; border-right: 1px solid #333; overflow-y: auto; }
-#canvas-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
-canvas { border: 1px solid #333; background: #16213e; }
-h2 { color: #e94560; margin-bottom: 8px; font-size: 16px; }
-.input-group { margin-bottom: 12px; }
-.input-group label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; }
-textarea { width: 100%; height: 80px; background: #0f3460; border: 1px solid #333; color: #e0e0e0; padding: 8px; font-family: inherit; font-size: 13px; resize: none; }
-button { background: #e94560; color: #fff; border: none; padding: 8px 16px; cursor: pointer; font-family: inherit; font-size: 13px; width: 100%; margin-top: 4px; }
-button:hover { background: #c81e45; }
-button:disabled { background: #555; cursor: not-allowed; }
-#status { font-size: 12px; margin-top: 8px; padding: 8px; background: #0f3460; border-radius: 4px; min-height: 40px; }
-#messages { flex: 1; overflow-y: auto; margin-top: 8px; font-size: 11px; line-height: 1.5; }
-.msg { padding: 4px 0; border-bottom: 1px solid #222; }
-.msg-from { color: #e94560; font-weight: bold; }
-.msg-to { color: #0ea5e9; }
-.agent-card { display: flex; align-items: center; gap: 8px; padding: 6px; margin: 4px 0; background: #0f3460; border-radius: 4px; font-size: 12px; }
-.agent-dot { width: 8px; height: 8px; border-radius: 50%; }
-.dot-working { background: #22c55e; animation: pulse 1s infinite; }
-.dot-idle { background: #eab308; }
-.dot-resting { background: #3b82f6; }
-.dot-error { background: #ef4444; }
-@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+:root {
+  --bg-deep: #0b0e14;
+  --bg-base: #0f1219;
+  --bg-surface: #161b25;
+  --bg-elevated: #1c2333;
+  --border: #252d3d;
+  --border-light: #2f3a50;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #565e6c;
+  --accent-lead: #f97066;
+  --accent-lead-dim: rgba(249,112,102,0.15);
+  --accent-pm: #6cb6ff;
+  --accent-pm-dim: rgba(108,182,255,0.15);
+  --accent-coder: #57ab5a;
+  --accent-coder-dim: rgba(87,171,90,0.15);
+  --radius: 6px;
+  --radius-lg: 10px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+  --transition-fast: 0.15s cubic-bezier(0.4,0,0.2,1);
+  --transition-normal: 0.25s cubic-bezier(0.4,0,0.2,1);
+  --font-mono: 'JetBrains Mono','Fira Code','Cascadia Code',monospace;
+  --font-sans: 'Inter','IBM Plex Sans',system-ui,sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg-deep); color:var(--text-primary); font-family:var(--font-sans); display:flex; height:100vh; overflow:hidden; }
+#sidebar {
+  width:310px; padding:20px 16px; display:flex; flex-direction:column;
+  border-right:1px solid var(--border); overflow-y:auto; flex-shrink:0;
+  background:var(--bg-base); z-index:2;
+}
+#sidebar::-webkit-scrollbar { width:4px; }
+#sidebar::-webkit-scrollbar-track { background:transparent; }
+#sidebar::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+#canvas-wrap {
+  flex:1; display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(ellipse at 50% 60%, #111827 0%, var(--bg-deep) 70%);
+}
+canvas { display:block; image-rendering:pixelated; image-rendering:crisp-edges; }
+h2 { color:var(--text-primary); margin-bottom:10px; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; }
+.input-group { margin-bottom:16px; }
+.input-group label { display:block; font-size:11px; color:var(--text-secondary); margin-bottom:6px; font-weight:500; }
+textarea {
+  width:100%; height:76px; background:var(--bg-surface); border:1px solid var(--border);
+  color:var(--text-primary); padding:10px 12px; font-family:var(--font-mono); font-size:12px;
+  resize:none; border-radius:var(--radius); transition:border-color var(--transition-fast); line-height:1.5;
+}
+textarea:focus { outline:none; border-color:var(--accent-lead); box-shadow:0 0 0 3px var(--accent-lead-dim); }
+button {
+  background:var(--accent-lead); color:#fff; border:none; padding:10px 16px; cursor:pointer;
+  font-family:var(--font-sans); font-size:13px; font-weight:600; width:100%; margin-top:8px;
+  border-radius:var(--radius); transition:all var(--transition-fast);
+}
+button:hover { background:#e05a52; transform:translateY(-1px); box-shadow:var(--shadow-md); }
+button:active { transform:translateY(0); }
+button:disabled { background:var(--bg-elevated); color:var(--text-muted); cursor:not-allowed; transform:none; box-shadow:none; }
+#status {
+  font-size:11px; margin-top:12px; padding:10px 12px; background:var(--bg-surface);
+  border:1px solid var(--border); border-radius:var(--radius); min-height:38px;
+  line-height:1.6; word-break:break-all; transition:all var(--transition-fast);
+}
+#messages { flex:1; overflow-y:auto; margin-top:12px; font-size:11px; line-height:1.5; }
+#messages::-webkit-scrollbar { width:4px; }
+#messages::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+.msg { padding:6px 8px; border-bottom:1px solid var(--border); margin:1px 0; border-radius:4px; transition:background var(--transition-fast); }
+.msg:hover { background:var(--bg-surface); }
+.msg-from { color:var(--accent-lead); font-weight:600; }
+.msg-to { color:var(--accent-pm); }
+.agent-card {
+  display:flex; align-items:center; gap:10px; padding:10px 12px; margin:4px 0;
+  background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius);
+  font-size:12px; transition:all var(--transition-fast);
+}
+.agent-card:hover { border-color:var(--border-light); background:var(--bg-elevated); }
+.agent-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; transition:all var(--transition-normal); }
+.dot-working { background:var(--accent-coder); box-shadow:0 0 8px rgba(87,171,90,0.5); animation:pulse 1.5s ease-in-out infinite; }
+.dot-idle { background:#d29922; }
+.dot-resting { background:var(--accent-pm); }
+.dot-error { background:var(--accent-lead); box-shadow:0 0 8px rgba(249,112,102,0.5); animation:pulse .8s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
 </style>
 </head>
 <body>
 <div id="sidebar">
-  <h2>项目工作仓库</h2>
+  <h2>Project Workshop</h2>
   <div class="input-group">
     <label>输入需求</label>
     <textarea id="requirement" placeholder="描述你的项目需求..."></textarea>
     <button id="submitBtn" onclick="submitTask()">启动项目</button>
   </div>
   <div id="status">等待需求输入...</div>
-  <h2 style="margin-top:12px">团队状态</h2>
+  <h2 style="margin-top:16px">Agent 状态</h2>
   <div id="agents"></div>
-  <h2 style="margin-top:12px">消息日志</h2>
+  <h2 style="margin-top:16px">消息日志</h2>
   <div id="messages"></div>
 </div>
 <div id="canvas-wrap">
-  <canvas id="office" width="800" height="600"></canvas>
+  <canvas id="office"></canvas>
 </div>
 
 <script>
@@ -54,269 +112,550 @@ const API_PORT = location.port || '3800';
 const WS_URL = `ws://${location.hostname}:${API_PORT}/ws`;
 const API_BASE = `http://${location.hostname}:${API_PORT}`;
 let ws = null;
+
 let agents = {
-  'tech-lead': { role: 'tech-lead', name: '技术总监 G', status: 'idle', animation: 'standing', position: {x:150,y:120}, targetX: 150, targetY: 120 },
-  'product-manager': { role: 'product-manager', name: '产品经理 D', status: 'idle', animation: 'standing', position: {x:650,y:120}, targetX: 650, targetY: 120 },
-  'coder': { role: 'coder', name: '程序员 M', status: 'idle', animation: 'standing', position: {x:400,y:420}, targetX: 400, targetY: 420 },
+  'tech-lead':       { role:'tech-lead', name:'技术总监 G', status:'idle', anim:'idle', dir:'down', x:0, y:0, tx:0, ty:0 },
+  'product-manager': { role:'product-manager', name:'产品经理 D', status:'idle', anim:'idle', dir:'down', x:0, y:0, tx:0, ty:0 },
+  'coder':           { role:'coder', name:'程序员 M', status:'idle', anim:'idle', dir:'down', x:0, y:0, tx:0, ty:0 },
 };
 let bubbles = [];
 let projectPhase = 'IDLE';
 
-function connectWS() {
-  ws = new WebSocket(WS_URL);
-  ws.onopen = () => { updateStatus('已连接服务器'); };
-  ws.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    handleWSMessage(data);
-  };
-  ws.onclose = () => { updateStatus('连接断开，3秒后重连...'); setTimeout(connectWS, 3000); };
+// ===== Canvas Setup =====
+const canvas = document.getElementById('office');
+const ctx = canvas.getContext('2d');
+const dpr = window.devicePixelRatio || 1;
+let CW, CH;
+
+function resizeCanvas() {
+  const wrap = document.getElementById('canvas-wrap');
+  const w = wrap.clientWidth - 40;
+  const h = wrap.clientHeight - 40;
+  const ratio = Math.min(w / 960, h / 640);
+  CW = Math.floor(960 * ratio);
+  CH = Math.floor(640 * ratio);
+  canvas.style.width = CW + 'px';
+  canvas.style.height = CH + 'px';
+  canvas.width = CW * dpr;
+  canvas.height = CH * dpr;
+  ctx.setTransform(dpr * CW / 960, 0, 0, dpr * CH / 640, 0, 0);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+const W = 960, H = 640;
+const PX = 3;
+let frame = 0;
+
+// ===== Color System =====
+const THEME = {
+  bg: '#0b0e14',
+  floor1: '#111620',
+  floor2: '#0e1319',
+  wall: '#1a2030',
+  wallDark: '#141a26',
+  wallLight: '#222c3e',
+  border: '#2a3548',
+  door: '#1f2937',
+  desk: '#2a3040',
+  deskTop: '#343e52',
+  deskLeg: '#1e2636',
+  screen: '#0a0e16',
+  screenBorder: '#1a2030',
+  chair: '#1e2636',
+  chairSeat: '#263040',
+  plant: '#2d7a3a',
+  plantDark: '#1e5a28',
+  pot: '#5a4030',
+  whiteboard: '#d0d4dc',
+  text: '#8b949e',
+  textDim: '#4a5260',
+  lead: '#f97066',
+  leadDim: '#3a1a18',
+  pm: '#6cb6ff',
+  pmDim: '#162030',
+  coder: '#57ab5a',
+  coderDim: '#1a2a1a',
+};
+
+// ===== Room Layout =====
+const ROOMS = [
+  { id:'G', label:'G · 技术总监', model:'GLM-5.1', x:20, y:20, w:440, h:250, accent:THEME.lead, accentDim:THEME.leadDim, agent:'tech-lead' },
+  { id:'D', label:'D · 产品经理', model:'DeepSeek', x:500, y:20, w:440, h:250, accent:THEME.pm, accentDim:THEME.pmDim, agent:'product-manager' },
+  { id:'M', label:'M · 程序员', model:'Coder', x:200, y:360, w:560, h:260, accent:THEME.coder, accentDim:THEME.coderDim, agent:'coder' },
+];
+
+// ===== Sprite Colors =====
+const SPRITES = {
+  'tech-lead': { hair:'#6b2020', hat:THEME.lead, skin:'#e8c4a0', shirt:'#2a2a4a', pants:'#1a1a30', shoes:'#111', glasses:null },
+  'product-manager': { hair:'#3a2a1a', hat:null, skin:'#f0d0b0', shirt:'#3a6090', pants:'#1a2840', shoes:'#181818', glasses:'#3a3a3a' },
+  'coder': { hair:'#1a1a1a', hat:null, skin:'#e8c4a0', shirt:'#2a6a30', pants:'#1a1a28', shoes:'#111', headphones:'#4a4a4a' },
+};
+
+// ===== Draw Helpers =====
+function px(x, y, w, h, c) { ctx.fillStyle=c; ctx.fillRect(x|0, y|0, w|0, h|0); }
+
+function drawRoom(rm) {
+  const {x,y,w,h,accent,accentDim,label,model,agent} = rm;
+
+  ctx.fillStyle = THEME.wall;
+  ctx.fillRect(x, y, w, h);
+
+  ctx.fillStyle = THEME.wallDark;
+  ctx.fillRect(x, y, w, 4);
+
+  ctx.fillStyle = THEME.border;
+  ctx.fillRect(x, y, 2, h);
+  ctx.fillRect(x+w-2, y, 2, h);
+  ctx.fillRect(x, y+h-2, w, 2);
+
+  ctx.fillStyle = accent;
+  ctx.fillRect(x+2, y+4, w-4, 2);
+
+  const glow = ctx.createLinearGradient(0, y+4, 0, y+24);
+  glow.addColorStop(0, accent+'33');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(x, y+4, w, 20);
+
+  ctx.fillStyle = THEME.floor1;
+  ctx.fillRect(x+2, y+h-40, w-4, 38);
+  for(let tx=x+10; tx<x+w-10; tx+=30) {
+    ctx.fillStyle = THEME.floor2;
+    ctx.fillRect(tx, y+h-38, 14, 36);
+  }
+
+  ctx.fillStyle = THEME.wallLight;
+  ctx.fillRect(x, y+h-42, w, 2);
+
+  ctx.font = 'bold 12px var(--font-mono)';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = accent;
+  ctx.fillText(label, x+12, y+24);
+  ctx.font = '10px var(--font-mono)';
+  ctx.fillStyle = THEME.textDim;
+  ctx.fillText(model, x+12, y+38);
+
+  const statusColors = {working:THEME.coder, idle:'#d29922', resting:THEME.pm, error:THEME.lead};
+  const statusText = {working:'编码中', idle:'待命中', resting:'休息中', error:'异常'};
+  const a = agents[agent];
+  if(a) {
+    ctx.fillStyle = statusColors[a.status]||'#555';
+    ctx.font = '9px var(--font-mono)';
+    ctx.fillText(statusText[a.status]||'', x+w-60, y+24);
+  }
 }
 
-function handleWSMessage(data) {
-  switch(data.type) {
-    case 'init':
-      if (data.agents) data.agents.forEach(a => { if(agents[a.role]) { agents[a.role].status = a.status; agents[a.role].animation = a.animation; }});
-      break;
-    case 'project_started':
-      updateStatus('项目已启动！');
-      break;
-    case 'phase_change':
-      projectPhase = data.phase;
-      updateStatus(`当前阶段: ${data.phase}`);
-      break;
-    case 'phase_progress':
-      let msg = `阶段: ${data.phase}`;
-      if (data.round) msg += ` 第${data.round}轮`;
-      if (data.task) msg += ` 任务: ${data.task}`;
-      updateStatus(msg);
-      if (data.phase === 'DISCUSSING') {
-        moveAgent('tech-lead', 350, 120);
-        moveAgent('product-manager', 450, 120);
-      } else if (data.phase === 'CODING' && data.task) {
-        moveAgent('coder', 400, 420);
-      } else if (data.phase === 'REVIEWING') {
-        moveAgent('tech-lead', 380, 420);
-      }
-      break;
-    case 'agent_status':
-      if (agents[data.role]) {
-        agents[data.role].status = data.status;
-        agents[data.role].animation = data.animation;
-      }
-      break;
-    case 'agent_message':
-      if (data.message) {
-        addMessage(data.message);
-        const m = data.message;
-        const fromName = agents[m.from]?.name || m.from;
-        const content = m.content ? m.content.slice(0, 60) + '...' : '';
-        addBubble(m.from, `${content}`);
-      }
-      break;
-    case 'phase_done':
-      if (data.phase === 'DISCUSSING') {
-        moveAgent('tech-lead', 150, 120);
-        moveAgent('product-manager', 650, 120);
-      }
-      break;
-    case 'project_done':
-      updateStatus('项目完成！交付报告已生成。');
-      Object.keys(agents).forEach(r => { agents[r].status = 'idle'; agents[r].animation = 'standing'; });
-      break;
-    case 'ping': break;
-    default:
-      if (data.message) updateStatus(data.message);
-  }
-  renderAgents();
+function drawDesk(x, y) {
+  px(x, y, 80, 4, THEME.deskTop);
+  px(x, y+4, 80, 18, THEME.desk);
+  px(x+4, y+22, 4, 10, THEME.deskLeg);
+  px(x+72, y+22, 4, 10, THEME.deskLeg);
 }
+
+function drawMonitor(x, y, status) {
+  px(x, y, 44, 30, THEME.screenBorder);
+  px(x+2, y+2, 40, 24, THEME.screen);
+  px(x+18, y+30, 8, 6, THEME.screenBorder);
+  px(x+14, y+36, 16, 3, THEME.screenBorder);
+
+  const sc = {working:THEME.coder, idle:'#d29922', resting:THEME.pm, error:THEME.lead};
+  const c = sc[status]||'#333';
+  for(let i=0;i<3;i++) {
+    ctx.fillStyle = c+'88';
+    ctx.fillRect(x+6+i*12, y+8+i*4, 8+i*2, 2);
+  }
+}
+
+function drawChair(x, y) {
+  px(x, y, 30, 4, THEME.chairSeat);
+  px(x+2, y-16, 26, 18, THEME.chair);
+  px(x+10, y+4, 4, 8, THEME.chair);
+  px(x+4, y+12, 4, 2, THEME.chair);
+  px(x+22, y+12, 4, 2, THEME.chair);
+}
+
+function drawPlant(x, y) {
+  px(x, y+14, 12, 12, THEME.pot);
+  px(x+1, y+12, 10, 3, '#6a5040');
+  const t = Date.now()/2000;
+  for(let i=0;i<4;i++) {
+    const a = t+i*1.5;
+    const dx = Math.sin(a)*3;
+    ctx.fillStyle = i%2===0?THEME.plant:THEME.plantDark;
+    ctx.beginPath();
+    ctx.arc(x+6+dx, y+6-i*5, 5-i, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+// ===== Sprite Drawing =====
+function drawSprite(sx, sy, role, anim, frm, dir) {
+  const c = SPRITES[role];
+  const f = frm % 4;
+  const t = Date.now();
+  const cx = sx|0, cy = sy|0;
+  const faceLeft = dir === 'left';
+  const faceUp = dir === 'up';
+  const faceRight = dir === 'right';
+  const dx = faceLeft ? PX : 0;
+
+  function p(ox, y, w, h, col) {
+    if(!col) return;
+    ctx.fillStyle = col;
+    ctx.fillRect((cx+ox+dx)|0, y|0, w|0, h|0);
+  }
+  function pf(oxL, oxR, y, w, h, col) {
+    if(!col) return;
+    ctx.fillStyle = col;
+    const ox = faceRight ? oxR : oxL;
+    ctx.fillRect((cx+ox)|0, y|0, w|0, h|0);
+  }
+
+  if(anim === 'walking') {
+    const bob = [0,-1,0,-1][f];
+    const legA = [1,0,-1,0][f]*PX;
+    const legB = [-1,0,1,0][f]*PX;
+    const armA = [-1,0,1,0][f]*PX;
+    const armB = [1,0,-1,0][f]*PX;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.beginPath(); ctx.ellipse(cx, cy+16, 10, 4, 0, 0, Math.PI*2); ctx.fill();
+
+    if(faceUp) {
+      p(-2*PX, cy-7*PX+bob, 4*PX, PX, c.hair);
+      p(-2*PX, cy-6*PX+bob, 4*PX, 3*PX, c.skin);
+      p(-2*PX, cy-3*PX+bob, 4*PX, 3*PX, c.shirt);
+      p(-PX, cy+legA, PX, 3*PX, c.pants);
+      p(0, cy+legB, PX, 3*PX, c.pants);
+      p(-PX, cy+3*PX+legA, PX, PX, c.shoes);
+      p(0, cy+3*PX+legB, PX, PX, c.shoes);
+    } else {
+      p(-2*PX, cy-7*PX+bob, 4*PX, PX, c.hair);
+      p(-2*PX, cy-6*PX+bob, 4*PX, 3*PX, c.skin);
+      pf(-PX, 0, cy-5*PX+bob, PX, PX, '#1a1a1a');
+      if(c.glasses) p(-2*PX, cy-5*PX+bob, 4*PX, PX, c.glasses);
+      p(-2*PX, cy-3*PX+bob, 4*PX, 3*PX, c.shirt);
+      pf(-3*PX, 3*PX, cy-2*PX+bob+armA, PX, 2*PX, c.skin);
+      pf(2*PX, -PX, cy-2*PX+bob+armB, PX, 2*PX, c.skin);
+      p(-PX, cy+legA, PX, 3*PX, c.pants);
+      p(0, cy+legB, PX, 3*PX, c.pants);
+      p(-PX, cy+3*PX+legA, PX, PX, c.shoes);
+      p(0, cy+3*PX+legB, PX, PX, c.shoes);
+    }
+    if(c.hat) { p(-2*PX, cy-8*PX+bob, 5*PX, PX, c.hat); p(-PX, cy-9*PX+bob, 3*PX, PX, c.hat); }
+    if(c.headphones) { p(-3*PX, cy-6*PX+bob, PX, 2*PX, c.headphones); p(2*PX, cy-6*PX+bob, PX, 2*PX, c.headphones); p(-2*PX, cy-7*PX+bob, 4*PX, PX, c.headphones); }
+    return;
+  }
+
+  if(anim === 'talking') {
+    const nod = Math.sin(t/300)>0.5 ? PX : 0;
+    const wave = Math.sin(t/180)*PX*1.5;
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.beginPath(); ctx.ellipse(cx, cy+16, 10, 4, 0, 0, Math.PI*2); ctx.fill();
+
+    p(-2*PX, cy-7*PX+nod, 4*PX, PX, c.hair);
+    p(-2*PX, cy-6*PX+nod, 4*PX, 3*PX, c.skin);
+    p(-PX, cy-5*PX+nod, PX, PX, '#1a1a1a');
+    p(PX, cy-5*PX+nod, PX, PX, '#1a1a1a');
+    if(c.glasses) p(-2*PX, cy-5*PX+nod, 4*PX, PX, c.glasses);
+    p(-2*PX, cy-3*PX, 4*PX, 3*PX, c.shirt);
+    p(-3*PX, cy-2*PX+wave, PX, 2*PX, c.skin);
+    p(2*PX, cy-2*PX-wave, PX, 2*PX, c.skin);
+    p(-PX, cy, PX, 3*PX, c.pants);
+    p(0, cy, PX, 3*PX, c.pants);
+    p(-PX, cy+3*PX, PX, PX, c.shoes);
+    p(0, cy+3*PX, PX, PX, c.shoes);
+    if(c.hat) { p(-2*PX, cy-8*PX+nod, 5*PX, PX, c.hat); p(-PX, cy-9*PX+nod, 3*PX, PX, c.hat); }
+    if(c.headphones) { p(-3*PX, cy-6*PX+nod, PX, 2*PX, c.headphones); p(2*PX, cy-6*PX+nod, PX, 2*PX, c.headphones); p(-2*PX, cy-7*PX+nod, 4*PX, PX, c.headphones); }
+    return;
+  }
+
+  if(anim === 'sitting') {
+    const ty = Math.sin(t/150)>0 ? 0 : PX;
+    p(-2*PX, cy-5*PX, 4*PX, PX, c.hair);
+    p(-2*PX, cy-4*PX, 4*PX, 3*PX, c.skin);
+    p(-PX, cy-3*PX, PX, PX, '#1a1a1a');
+    p(PX, cy-3*PX, PX, PX, '#1a1a1a');
+    if(c.glasses) p(-2*PX, cy-3*PX, 4*PX, PX, c.glasses);
+    p(-2*PX, cy-PX, 4*PX, 3*PX, c.shirt);
+    p(-3*PX, cy+ty, PX, 2*PX, c.skin);
+    p(2*PX, cy+ty, PX, 2*PX, c.skin);
+    if(c.hat) { p(-2*PX, cy-6*PX, 5*PX, PX, c.hat); p(-PX, cy-7*PX, 3*PX, PX, c.hat); }
+    if(c.headphones) { p(-3*PX, cy-4*PX, PX, 2*PX, c.headphones); p(2*PX, cy-4*PX, PX, 2*PX, c.headphones); p(-2*PX, cy-5*PX, 4*PX, PX, c.headphones); }
+    return;
+  }
+
+  // idle / standing
+  const breathe = Math.sin(t/600)*0.6;
+  const blink = Math.sin(t/2500)>0.96;
+  const sway = Math.sin(t/900)*PX*0.3;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.beginPath(); ctx.ellipse(cx, cy+16, 10, 4, 0, 0, Math.PI*2); ctx.fill();
+
+  p(-2*PX, cy-7*PX+breathe, 4*PX, PX, c.hair);
+  p(-2*PX, cy-6*PX+breathe, 4*PX, 3*PX, c.skin);
+  if(!blink) { p(-PX, cy-5*PX+breathe, PX, PX, '#1a1a1a'); p(PX, cy-5*PX+breathe, PX, PX, '#1a1a1a'); }
+  else { p(-PX, cy-5*PX+breathe, 2*PX, PX, c.skin); }
+  if(c.glasses) p(-2*PX, cy-5*PX+breathe, 4*PX, PX, c.glasses);
+  p(-2*PX, cy-3*PX+breathe, 4*PX, 3*PX, c.shirt);
+  p(-3*PX+sway, cy-2*PX+breathe, PX, 2*PX, c.skin);
+  p(2*PX-sway, cy-2*PX+breathe, PX, 2*PX, c.skin);
+  p(-PX, cy, PX, 3*PX, c.pants);
+  p(0, cy, PX, 3*PX, c.pants);
+  p(-PX, cy+3*PX, PX, PX, c.shoes);
+  p(0, cy+3*PX, PX, PX, c.shoes);
+  if(c.hat) { p(-2*PX, cy-8*PX+breathe, 5*PX, PX, c.hat); p(-PX, cy-9*PX+breathe, 3*PX, PX, c.hat); }
+  if(c.headphones) { p(-3*PX, cy-6*PX+breathe, PX, 2*PX, c.headphones); p(2*PX, cy-6*PX+breathe, PX, 2*PX, c.headphones); p(-2*PX, cy-7*PX+breathe, 4*PX, PX, c.headphones); }
+}
+
+function drawNameTag(x, y, name, color) {
+  ctx.font = 'bold 9px var(--font-mono)';
+  ctx.textAlign = 'center';
+  const tw = ctx.measureText(name).width;
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.beginPath();
+  ctx.roundRect(x-tw/2-4, y-5, tw+8, 14, 3);
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.fillText(name, x, y+5);
+  ctx.textAlign = 'left';
+}
+
+// ===== Scene Drawing =====
+function drawScene() {
+  ctx.fillStyle = THEME.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // corridor
+  ctx.fillStyle = THEME.wallDark;
+  ctx.fillRect(20, 280, 920, 60);
+  ctx.fillStyle = THEME.border;
+  ctx.fillRect(20, 280, 920, 2);
+  ctx.fillRect(20, 338, 920, 2);
+
+  ctx.font = 'italic 10px var(--font-mono)';
+  ctx.fillStyle = THEME.textDim;
+  ctx.textAlign = 'center';
+  ctx.fillText('— 走廊 —', W/2, 315);
+  ctx.textAlign = 'left';
+
+  // meeting table
+  ctx.fillStyle = '#2a2218';
+  ctx.fillRect(380, 296, 200, 6);
+  ctx.fillStyle = '#3a3020';
+  ctx.fillRect(382, 296, 196, 3);
+
+  // rooms
+  ROOMS.forEach(drawRoom);
+
+  // G room furniture
+  drawDesk(100, 160);
+  drawMonitor(115, 130, agents['tech-lead'].status);
+  drawChair(125, 190);
+
+  // D room furniture
+  drawDesk(580, 160);
+  drawMonitor(595, 130, agents['product-manager'].status);
+  drawChair(605, 190);
+
+  // M room furniture
+  drawDesk(300, 490);
+  drawMonitor(315, 460, agents['coder'].status);
+  drawChair(325, 520);
+  drawDesk(450, 490);
+  drawMonitor(465, 460, agents['coder'].status);
+
+  // whiteboard
+  ctx.fillStyle = THEME.whiteboard;
+  ctx.fillRect(540, 380, 70, 50);
+  ctx.strokeStyle = '#aaa';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(540, 380, 70, 50);
+  px(545, 386, 28, 2, THEME.lead);
+  px(545, 392, 50, 2, THEME.pm);
+  px(545, 398, 38, 2, THEME.coder);
+  px(545, 404, 55, 2, THEME.textDim);
+
+  // plants
+  drawPlant(40, 500);
+  drawPlant(880, 500);
+  drawPlant(40, 40);
+  drawPlant(900, 40);
+}
+
+function drawBubbles() {
+  for(let i=bubbles.length-1; i>=0; i--) {
+    const b = bubbles[i];
+    b.timer--;
+    b.y -= 0.4;
+    if(b.timer<30) b.alpha -= 0.03;
+    if(b.alpha<=0) { bubbles.splice(i,1); continue; }
+    ctx.globalAlpha = Math.max(0, b.alpha);
+    const txt = b.text.slice(0,32);
+    ctx.font = '10px var(--font-mono)';
+    const tw = ctx.measureText(txt).width;
+    const bx = Math.max(5, Math.min(b.x-tw/2-8, W-tw-20));
+    const by = b.y-20;
+    ctx.fillStyle = 'rgba(230,237,243,0.95)';
+    ctx.beginPath(); ctx.roundRect(bx, by, tw+14, 20, 5); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(b.x-4, by+20); ctx.lineTo(b.x, by+27); ctx.lineTo(b.x+4, by+20); ctx.fill();
+    ctx.fillStyle = '#0b0e14';
+    ctx.fillText(txt, bx+7, by+14);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ===== Movement =====
+function getDir(a) {
+  const dx = a.tx-a.x, dy = a.ty-a.y;
+  if(Math.abs(dx)>Math.abs(dy)) return dx>0?'right':'left';
+  if(Math.abs(dy)>1) return dy>0?'down':'up';
+  return 'down';
+}
+
+function updateMovement() {
+  frame++;
+  for(const a of Object.values(agents)) {
+    const dx = a.tx-a.x, dy = a.ty-a.y;
+    const d = Math.sqrt(dx*dx+dy*dy);
+    if(d>1.5) {
+      const speed = Math.min(d, 2.5);
+      a.x += (dx/d)*speed;
+      a.y += (dy/d)*speed;
+      a.anim = 'walking';
+      a.dir = getDir(a);
+    } else if(a.anim==='walking') {
+      a.x = a.tx; a.y = a.ty;
+      a.anim = a.status==='working' ? (a.role==='coder'?'sitting':'talking') : 'idle';
+      a.dir = 'down';
+    }
+  }
+}
+
+// ===== Positions =====
+const POS = {
+  'tech-lead': {home:{x:160,y:200}, discuss:{x:420,y:310}, review:{x:400,y:520}},
+  'product-manager': {home:{x:680,y:200}, discuss:{x:540,y:310}},
+  'coder': {home:{x:360,y:530}, coding:{x:360,y:530}},
+};
+Object.entries(POS).forEach(([r,p]) => { agents[r].x=p.home.x; agents[r].y=p.home.y; agents[r].tx=p.home.x; agents[r].ty=p.home.y; });
 
 function moveAgent(role, x, y) {
-  if (agents[role]) { agents[role].targetX = x; agents[role].targetY = y; agents[role].animation = 'walking'; }
+  const a = agents[role];
+  if(!a) return;
+  a.tx=x; a.ty=y; a.anim='walking';
+}
+
+// ===== Render Loop =====
+function render() {
+  ctx.save();
+  drawScene();
+  updateMovement();
+
+  const items = Object.entries(agents).map(([role,a])=>({y:a.y,role,a}));
+  items.sort((a,b)=>a.y-b.y);
+
+  for(const it of items) {
+    drawSprite(it.a.x, it.a.y, it.role, it.a.anim, frame>>3, it.a.dir||'down');
+    const tags = {'tech-lead':'G','product-manager':'D','coder':'M'};
+    const tcs = {'tech-lead':THEME.lead,'product-manager':THEME.pm,'coder':THEME.coder};
+    drawNameTag(it.a.x, it.a.y+20, tags[it.role], tcs[it.role]);
+  }
+
+  drawBubbles();
+  ctx.restore();
+  requestAnimationFrame(render);
+}
+
+// ===== WS / UI Logic =====
+function connectWS() {
+  ws = new WebSocket(WS_URL);
+  ws.onopen = () => updateStatus('已连接服务器');
+  ws.onmessage = e => { try { handleMsg(JSON.parse(e.data)); } catch(_){} };
+  ws.onclose = () => { updateStatus('连接断开，3s 后重连...'); setTimeout(connectWS, 3000); };
+}
+
+function handleMsg(d) {
+  switch(d.type) {
+    case 'init':
+      if(d.agents) d.agents.forEach(a => { if(agents[a.role]) { agents[a.role].status=a.status; agents[a.role].anim=a.animation; }});
+      break;
+    case 'project_started': updateStatus('项目已启动！'); break;
+    case 'phase_change': projectPhase=d.phase; updateStatus(`当前阶段: ${d.phase}`); break;
+    case 'phase_progress':
+      let m = `阶段: ${d.phase}`;
+      if(d.round) m+=` 第${d.round}轮`;
+      if(d.task) m+=` 任务: ${d.task}`;
+      updateStatus(m);
+      if(d.phase==='DISCUSSING') { moveAgent('tech-lead',POS['tech-lead'].discuss.x,POS['tech-lead'].discuss.y); moveAgent('product-manager',POS['product-manager'].discuss.x,POS['product-manager'].discuss.y); }
+      else if(d.phase==='CODING') moveAgent('coder',POS['coder'].coding.x,POS['coder'].coding.y);
+      else if(d.phase==='REVIEWING') moveAgent('tech-lead',POS['tech-lead'].review.x,POS['tech-lead'].review.y);
+      break;
+    case 'agent_status':
+      if(agents[d.role]) { agents[d.role].status=d.status; agents[d.role].anim=d.animation; }
+      break;
+    case 'agent_message':
+      if(d.message) { addMessage(d.message); addBubble(d.message.from,(d.message.content||'').slice(0,60)); }
+      break;
+    case 'phase_done':
+      if(d.phase==='DISCUSSING') { moveAgent('tech-lead',POS['tech-lead'].home.x,POS['tech-lead'].home.y); moveAgent('product-manager',POS['product-manager'].home.x,POS['product-manager'].home.y); }
+      break;
+    case 'project_done':
+      updateStatus('项目完成！');
+      Object.keys(agents).forEach(r => { agents[r].status='idle'; agents[r].anim='idle'; });
+      break;
+    case 'ping': break;
+    default: if(d.message) updateStatus(d.message);
+  }
+  renderAgentsUI();
 }
 
 function addMessage(msg) {
   const el = document.getElementById('messages');
-  const fromName = agents[msg.from]?.name || msg.from;
-  const toName = agents[msg.to]?.name || msg.to;
+  const fn = agents[msg.from]?.name||msg.from;
+  const tn = agents[msg.to]?.name||msg.to;
   const div = document.createElement('div');
   div.className = 'msg';
-  div.innerHTML = `<span class="msg-from">${fromName}</span> → <span class="msg-to">${toName}</span>: ${msg.type} (Phase ${msg.phase})`;
+  div.innerHTML = `<span class="msg-from">${fn}</span> → <span class="msg-to">${tn}</span>: ${msg.type||''} (Phase ${msg.phase})`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
 }
 
-function addBubble(role, text) {
-  const a = agents[role];
-  if (!a) return;
-  bubbles.push({ x: a.position.x, y: a.position.y - 50, text, alpha: 1, timer: 180 });
+function addBubble(role, txt) {
+  const a = agents[role]; if(!a) return;
+  bubbles.push({x:a.x, y:a.y-40, text:txt, alpha:1, timer:160});
 }
 
-function updateStatus(text) {
-  document.getElementById('status').textContent = text;
-}
+function updateStatus(t) { document.getElementById('status').textContent=t; }
 
-function renderAgents() {
+function renderAgentsUI() {
   const el = document.getElementById('agents');
+  const sm = {working:'工作中',idle:'待命中',resting:'休息中',error:'异常'};
+  const dc = {working:'dot-working',idle:'dot-idle',resting:'dot-resting',error:'dot-error'};
   el.innerHTML = '';
-  for (const [role, a] of Object.entries(agents)) {
-    const statusMap = { working: '工作中', idle: '摸鱼中', resting: '休息中', error: '报错中' };
-    const dotClass = { working: 'dot-working', idle: 'dot-idle', resting: 'dot-resting', error: 'dot-error' };
-    el.innerHTML += `<div class="agent-card"><div class="agent-dot ${dotClass[a.status]||'dot-idle'}"></div>${a.name}: ${statusMap[a.status]||a.status}</div>`;
+  for(const [role,a] of Object.entries(agents)) {
+    const accent = {'tech-lead':'var(--accent-lead)','product-manager':'var(--accent-pm)','coder':'var(--accent-coder)'}[role];
+    el.innerHTML += `<div class="agent-card" style="border-left:3px solid ${accent}"><div class="agent-dot ${dc[a.status]||'dot-idle'}"></div><div><strong style="color:${accent}">${a.name}</strong><br><span style="font-size:10px;color:var(--text-muted)">${sm[a.status]||a.status}</span></div></div>`;
   }
 }
 
 async function submitTask() {
   const req = document.getElementById('requirement').value.trim();
-  if (!req) return;
+  if(!req) return;
   document.getElementById('submitBtn').disabled = true;
-  updateStatus('正在提交需求...');
+  updateStatus('正在提交...');
   try {
-    const res = await fetch(`${API_BASE}/api/task`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ requirement: req })
-    });
-    const data = await res.json();
-    if (data.error) { updateStatus('错误: ' + data.error); document.getElementById('submitBtn').disabled = false; }
-    else { updateStatus('项目已启动: ' + data.projectId); setTimeout(() => { document.getElementById('submitBtn').disabled = false; }, 5000); }
-  } catch(e) { updateStatus('提交失败: ' + e.message); document.getElementById('submitBtn').disabled = false; }
-}
-
-// ===== Canvas 渲染 =====
-const canvas = document.getElementById('office');
-const ctx = canvas.getContext('2d');
-const W = canvas.width, H = canvas.height;
-
-function drawOffice() {
-  ctx.fillStyle = '#16213e';
-  ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = '#2a3a5c';
-  ctx.lineWidth = 2;
-
-  // G room
-  ctx.strokeRect(40, 30, 220, 160);
-  ctx.fillStyle = '#e94560'; ctx.font = '13px monospace'; ctx.fillText('技术总监 G (GLM-5.1)', 60, 55);
-  drawDesk(100, 100);
-
-  // D room
-  ctx.strokeRect(540, 30, 220, 160);
-  ctx.fillStyle = '#0ea5e9'; ctx.fillText('产品经理 D (DeepSeek)', 560, 55);
-  drawDesk(600, 100);
-
-  // corridor
-  ctx.setLineDash([5, 5]);
-  ctx.strokeStyle = '#333';
-  ctx.beginPath(); ctx.moveTo(40, 210); ctx.lineTo(760, 210); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = '#444'; ctx.font = '11px monospace'; ctx.fillText('走廊', 380, 230);
-
-  // M desks
-  ctx.strokeStyle = '#2a3a5c';
-  const dx = 250;
-  ctx.strokeRect(dx, 360, 180, 120);
-  ctx.fillStyle = '#888'; ctx.font = '11px monospace';
-  ctx.fillText('程序员 M 工位', dx + 30, 380);
-  drawDesk(dx + 50, 420);
-
-  // M status on screens
-  const statusColors = { working: '#22c55e', idle: '#eab308', resting: '#3b82f6', error: '#ef4444' };
-  const statusText = { working: '工作中', idle: '摸鱼中', resting: '休息中', error: '报错中' };
-  const m = agents['coder'];
-  ctx.fillStyle = statusColors[m.status] || '#555';
-  ctx.font = '10px monospace';
-  ctx.fillText(statusText[m.status] || '', 300, 455);
-}
-
-function drawDesk(x, y) {
-  ctx.fillStyle = '#2a3a5c';
-  ctx.fillRect(x, y, 60, 30);
-  ctx.fillStyle = '#0f3460';
-  ctx.fillRect(x + 5, y + 3, 50, 24);
-}
-
-function drawPixelPerson(x, y, animation, role) {
-  const colors = { 'tech-lead': '#e94560', 'product-manager': '#0ea5e9', 'coder': '#22c55e' };
-  const c = colors[role] || '#fff';
-
-  // body
-  ctx.fillStyle = c;
-  ctx.fillRect(x - 8, y - 8, 16, 16);
-
-  // head
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(x - 4, y - 16, 8, 8);
-
-  // eyes
-  ctx.fillStyle = '#000';
-  ctx.fillRect(x - 2, y - 14, 2, 2);
-  ctx.fillRect(x + 1, y - 14, 2, 2);
-
-  // legs
-  const legOffset = animation === 'walking' ? Math.sin(Date.now() / 100) * 4 : 0;
-  ctx.fillStyle = c;
-  ctx.fillRect(x - 5, y + 8, 3, 8 + legOffset);
-  ctx.fillRect(x + 2, y + 8, 3, 8 - legOffset);
-
-  // arms
-  const armOffset = animation === 'talking' ? Math.sin(Date.now() / 150) * 6 : 0;
-  ctx.fillRect(x - 12, y - 4 + armOffset, 4, 3);
-  ctx.fillRect(x + 8, y - 4 - armOffset, 4, 3);
-
-  // sitting
-  if (animation === 'sitting') {
-    ctx.fillStyle = '#333';
-    ctx.fillRect(x - 10, y + 6, 20, 4);
-  }
-}
-
-function drawBubbles() {
-  for (let i = bubbles.length - 1; i >= 0; i--) {
-    const b = bubbles[i];
-    b.timer--;
-    b.y -= 0.3;
-    if (b.timer < 30) b.alpha -= 0.03;
-    if (b.alpha <= 0) { bubbles.splice(i, 1); continue; }
-    ctx.globalAlpha = b.alpha;
-    ctx.fillStyle = '#fff';
-    ctx.font = '10px monospace';
-    const maxW = 120;
-    const text = b.text.slice(0, 30);
-    const tw = ctx.measureText(text).width;
-    const bx = Math.max(5, Math.min(b.x - tw/2 - 4, W - tw - 14));
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.fillRect(bx, b.y - 14, tw + 8, 18);
-    ctx.fillStyle = '#000';
-    ctx.fillText(text, bx + 4, b.y);
-    ctx.globalAlpha = 1;
-  }
-}
-
-function lerpAgents() {
-  for (const a of Object.values(agents)) {
-    const dx = a.targetX - a.position.x;
-    const dy = a.targetY - a.position.y;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    if (dist > 2) {
-      a.position.x += dx * 0.05;
-      a.position.y += dy * 0.05;
-      a.animation = 'walking';
-    } else if (a.animation === 'walking') {
-      a.animation = a.status === 'working' ? 'talking' : 'standing';
-    }
-  }
-}
-
-function render() {
-  drawOffice();
-  lerpAgents();
-  for (const [role, a] of Object.entries(agents)) {
-    drawPixelPerson(a.position.x, a.position.y, a.animation, role);
-  }
-  drawBubbles();
-  requestAnimationFrame(render);
+    const r = await fetch(`${API_BASE}/api/task`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requirement:req})});
+    const d = await r.json();
+    if(d.error) { updateStatus('错误: '+d.error); document.getElementById('submitBtn').disabled=false; }
+    else { updateStatus('已启动: '+d.projectId); setTimeout(()=>{document.getElementById('submitBtn').disabled=false;},5000); }
+  } catch(e) { updateStatus('失败: '+e.message); document.getElementById('submitBtn').disabled=false; }
 }
 
 connectWS();
-renderAgents();
+renderAgentsUI();
 render();
 </script>
 </body>

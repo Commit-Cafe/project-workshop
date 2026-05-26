@@ -25,7 +25,7 @@ app.use((_req, res, next) => {
   if (_req.method === "OPTIONS") { res.sendStatus(204); return; }
   next();
 });
-app.get("/", (_req, res) => { res.type("html").send(readFileSync(HTML_PATH, "utf-8")); });
+app.get("/", (_req, res) => { res.set("Cache-Control", "no-store").type("html").send(readFileSync(HTML_PATH, "utf-8")); });
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });
 
